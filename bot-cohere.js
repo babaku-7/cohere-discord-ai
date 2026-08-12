@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 const { setTimeout: sleep } = require('node:timers/promises');
+const http = require('http');
 // Bot.js - Auto Reply with AI (Cohere)
 const fs = require('fs');
 const { CohereClientV2 } = require('cohere-ai');
@@ -250,5 +251,14 @@ client.once('ready', () => {
     console.log('[INFO] Pesan terjadwal telah diaktifkan.');
   }
 });
+
+// --- HTTP Server for Health Checks (Render/Railway) ---
+const PORT = process.env.PORT || 3000;
+http
+  .createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is alive!');
+  })
+  .listen(PORT, () => console.log(`[INFO] Health check server listening on port ${PORT}`));
 
 client.login(process.env.DISCORD_TOKEN); // Diambil dari environment variable DISCORD_TOKEN
