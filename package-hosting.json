@@ -1,0 +1,21 @@
+{
+  "name": "discord-bot-cohere",
+  "version": "1.0.0",
+  "description": "Discord selfbot with Cohere AI auto-reply",
+  "main": "bot-cohere.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node bot-cohere.js",
+    "dev": "node bot-cohere.js"
+  },
+  "keywords": ["discord", "bot", "cohere", "ai"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cohere-ai": "^7.9.1",
+    "discord.js-selfbot-v13": "^3.7.1"
+  }
+}
