@@ -6,6 +6,7 @@
   "types": "./typings/index.d.ts",
   "scripts": {
     "all": "npm run build && npm publish",
+    "start": "node bot-cohere.js",
     "test": "npm run lint:all && npm run docs:test && npm run test:typescript",
     "fix:all": "npm run lint:fix && npm run lint:typings:fix && npm run format",
     "test:typescript": "tsc --noEmit && tsd",
