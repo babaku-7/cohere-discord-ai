@@ -182,6 +182,32 @@ async function getAiReply(message, history) {
   }
 }
 
+/**
+ * Bergabung ke voice channel yang ditentukan di environment variable.
+ * Fungsi ini akan mencoba bergabung kembali jika terjadi error.
+ */
+async function joinVoiceChannel() {
+  if (!VOICE_CHANNEL_ID) return;
+
+  let channel;
+  try {
+    channel = await client.channels.fetch(VOICE_CHANNEL_ID);
+    if (!channel?.isVoice()) {
+      console.warn(`[WARN] Voice channel dengan ID ${VOICE_CHANNEL_ID} tidak ditemukan atau bukan saluran suara.`);
+      return;
+    }
+    await client.voice.joinChannel(channel, { selfMute: true });
+    console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted)`);
+  } catch (error) {
+    // Tangani error timeout spesifik dari library, tapi anggap berhasil karena bot tetap join.
+    if (channel && error.message.includes('Connection not established within 15 seconds')) {
+      console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted), meskipun ada peringatan timeout.`);
+    } else {
+      console.error(`[ERROR] Gagal bergabung ke voice channel: ${error.message}`);
+    }
+  }
+}
+
 // Auto-Reply ke pesan DENGAN AI
 client.on('messageCreate', async message => {
   // Jangan proses pesan jika tidak memenuhi syarat (misal, dari channel yang salah, dari bot, dll.)
@@ -214,28 +240,7 @@ client.once('ready', () => {
   console.log('[INFO] Menggunakan Cohere AI untuk balasan.');
 
   // Bergabung ke voice channel jika VOICE_CHANNEL_ID diatur
-  if (VOICE_CHANNEL_ID) {
-    const joinVoice = async () => {
-      let channel;
-      try {
-        channel = await client.channels.fetch(VOICE_CHANNEL_ID);
-        if (!channel?.isVoice()) {
-          console.warn(`[WARN] Voice channel dengan ID ${VOICE_CHANNEL_ID} tidak ditemukan atau bukan saluran suara.`);
-          return;
-        }
-        await client.voice.joinChannel(channel, { selfMute: true });
-        console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted)`);
-      } catch (error) {
-        // Tangani error timeout spesifik dari library, tapi anggap berhasil karena bot tetap join.
-        if (channel && error.message.includes('Connection not established within 15 seconds')) {
-          console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted), meskipun ada peringatan timeout.`);
-        } else {
-          console.error(`[ERROR] Gagal bergabung ke voice channel: ${error.message}`);
-        }
-      }
-    };
-    joinVoice();
-  }
+  joinVoiceChannel();
 
   // Jadwalkan pesan jika diatur di .env
   if (CRON_CHANNEL_ID && CRON_MESSAGE && cron.validate('0 7 * * *')) {
@@ -249,6 +254,18 @@ client.once('ready', () => {
         }
       }, { timezone: 'Asia/Jakarta' });
     console.log('[INFO] Pesan terjadwal telah diaktifkan.');
+  }
+});
+
+// --- Event Handler untuk Voice State ---
+client.on('voiceStateUpdate', (oldState, newState) => {
+  // Cek jika bot yang terputus dari voice channel
+  if (oldState.member.id === client.user.id && oldState.channelId && !newState.channelId) {
+    console.log('[WARN] Koneksi voice channel terputus. Mencoba untuk bergabung kembali...');
+    // Tunggu beberapa detik sebelum mencoba join lagi
+    setTimeout(() => {
+      joinVoiceChannel();
+    }, 5000); // Delay 5 detik
   }
 });
 
