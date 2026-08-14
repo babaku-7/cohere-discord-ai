@@ -222,6 +222,9 @@ client.on('messageCreate', async message => {
   processing.add(message.id);
 
   try {
+    // Tampilkan indikator "sedang mengetik" di channel
+    await message.channel.sendTyping();
+
     const history = chatHistories.get(message.author.id) || [];
     await getAiReply(message, history);
   } finally {
