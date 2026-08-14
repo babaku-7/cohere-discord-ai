@@ -1,42 +1,6 @@
 'use strict';
 require('dotenv').config();
 
-// ... di dalam fungsi getAiReply
-    // Cek apakah AI ingin menggunakan alat (tool)
-    if (response.message.tool_calls && response.message.tool_calls.length > 0) {
-      const toolCall = response.message.tool_calls[0];
-      if (toolCall.name === 'web_search') {
-        const searchResult = await webSearch(toolCall.parameters.query);
-        // Panggil API lagi dengan hasil pencarian sebagai konteks tambahan
-        const secondResponse = await cohere.chat({
-          model: 'command-r-plus-08-2024',
-          messages: messagesForApi, // Kirim riwayat yang sama
-          tool_results: [{ call: toolCall, output: searchResult }], // Tambahkan hasil pencarian
-        });
-        aiReply = secondResponse.message.content[0].text.trim();
-      }
-    } else {
-      // Jika tidak ada tool yang dipanggil, gunakan jawaban langsung
-      aiReply = response.message.content[0].text.trim();
-    }
-async function webSearch(query) {
-  console.log(`[SEARCH] Melakukan pencarian untuk: "${query}"`);
-  try {
-    // Ini adalah contoh menggunakan API pencarian seperti Serper.dev atau lainnya
-    const response = await axios.post('https://google.serper.dev/search', { q: query }, {
-      headers: { 'X-API-KEY': process.env.SEARCH_API_KEY, 'Content-Type': 'application/json' }
-    });
-    // Ambil beberapa hasil teratas dan rangkum
-    return JSON.stringify(response.data.organic.slice(0, 3).map(r => ({ title: r.title, snippet: r.snippet })));
-  } catch (error) {
-    console.error(`[SEARCH-ERROR] Gagal melakukan pencarian: ${error.message}`);
-    return "Pencarian gagal dilakukan.";
-  }
-}
-function validateEnvVars() {
-  const requiredEnvVars = ['DISCORD_TOKEN', 'CO_API_KEY', 'ALLOWED_CHANNEL_ID', 'SEARCH_API_KEY']; // Pastikan ini ada
-  // ...
-}
 const axios = require('axios'); // Contoh library untuk memanggil API
 const { setTimeout: sleep } = require('node:timers/promises');
 const http = require('http');
