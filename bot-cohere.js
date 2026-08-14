@@ -1,6 +1,7 @@
 'use strict';
 require('dotenv').config();
 
+const axios = require('axios'); // Contoh library untuk memanggil API
 const { setTimeout: sleep } = require('node:timers/promises');
 const http = require('http');
 // Bot.js - Auto Reply with AI (Cohere)
@@ -14,7 +15,7 @@ const { Client } = require('./src/index.js');
  * Jika ada yang kurang, proses akan dihentikan dengan pesan error yang jelas.
  */
 function validateEnvVars() {
-  const requiredEnvVars = ['DISCORD_TOKEN', 'CO_API_KEY', 'ALLOWED_CHANNEL_ID'];
+  const requiredEnvVars = ['DISCORD_TOKEN', 'CO_API_KEY', 'ALLOWED_CHANNEL_ID', 'SEARCH_API_KEY']; // Tambahkan validasi untuk API key pencarian
   const missingVars = requiredEnvVars.filter(v => !process.env[v]);
 
   if (missingVars.length > 0) {
@@ -130,6 +131,27 @@ async function handleCommand(message) {
 }
 
 /**
+ * Fungsi untuk mencari informasi di internet.
+ * Ini adalah fungsi tiruan, perlu diganti dengan API pencarian sungguhan.
+ * @param {string} query Kueri pencarian.
+ * @returns {Promise<string>} Hasil pencarian.
+ */
+async function webSearch(query) {
+  console.log(`[SEARCH] Melakukan pencarian untuk: "${query}"`);
+  try {
+    // Ini adalah contoh menggunakan API pencarian seperti Serper.dev atau lainnya
+    const response = await axios.post('https://google.serper.dev/search', { q: query }, {
+      headers: { 'X-API-KEY': process.env.SEARCH_API_KEY, 'Content-Type': 'application/json' }
+    });
+    // Ambil beberapa hasil teratas dan rangkum
+    return JSON.stringify(response.data.organic.slice(0, 3).map(r => ({ title: r.title, snippet: r.snippet })));
+  } catch (error) {
+    console.error(`[SEARCH-ERROR] Gagal melakukan pencarian: ${error.message}`);
+    return "Pencarian gagal dilakukan.";
+  }
+}
+
+/**
  * Menghasilkan balasan dari AI menggunakan Cohere.
  * @param {import('discord.js-selfbot-v13').Message} message Objek pesan yang diterima.
  * @param {Array<Object>} history Riwayat percakapan dengan user.
@@ -148,14 +170,48 @@ async function getAiReply(message, history) {
       { role: 'user', content: message.content },
     ];
 
+    // Definisikan "alat" yang bisa digunakan oleh AI
+    const tools = [
+      {
+        name: 'web_search',
+        description: 'Mencari informasi terkini di internet ketika kamu tidak tahu jawabannya, terutama untuk peristiwa setelah tahun 2023.',
+        parameter_definitions: {
+          query: {
+            description: 'Kueri pencarian yang jelas dan ringkas dalam Bahasa Indonesia.',
+            type: 'string',
+            required: true,
+          },
+        },
+      },
+    ];
+
     const response = await cohere.chat({
       model: 'command-r-plus-08-2024',
       messages: messagesForApi,
+      tools: tools, // Beri tahu AI tentang alat yang tersedia
       maxTokens: 2048,
       temperature: 0.8,
     });
 
-    const aiReply = response.message.content[0].text.trim();
+    let aiReply = '';
+
+    // Cek apakah AI ingin menggunakan alat (tool)
+    if (response.message.tool_calls && response.message.tool_calls.length > 0) {
+      const toolCall = response.message.tool_calls[0];
+      if (toolCall.name === 'web_search') {
+        const searchResult = await webSearch(toolCall.parameters.query);
+        // Panggil API lagi dengan hasil pencarian sebagai konteks tambahan
+        const secondResponse = await cohere.chat({
+          model: 'command-r-plus-08-2024',
+          messages: messagesForApi, // Kirim riwayat yang sama
+          tool_results: [{ call: toolCall, output: searchResult }], // Tambahkan hasil pencarian
+        });
+        aiReply = secondResponse.message.content[0].text.trim();
+      }
+    } else {
+      // Jika tidak ada tool yang dipanggil, gunakan jawaban langsung
+      aiReply = response.message.content[0].text.trim();
+    }
     console.log(`[AI-REPLY] Untuk ${message.author.username}: "${aiReply}"`);
 
     // Simpan pesan user dan balasan AI ke riwayat

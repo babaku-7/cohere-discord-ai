@@ -57,6 +57,7 @@
     "@google/generative-ai": "^0.24.1",
     "@sapphire/async-queue": "^1.5.5",
     "@sapphire/shapeshift": "^4.0.0",
+    "axios": "^1.19.0",
     "cohere-ai": "^8.0.0",
     "discord-api-types": "^0.38.15",
     "discord.js-selfbot-v13": "^3.7.1",
