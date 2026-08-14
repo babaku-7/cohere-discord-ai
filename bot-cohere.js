@@ -139,8 +139,8 @@ async function getAiReply(message, history) {
     // Buat system prompt dinamis dengan informasi waktu
     const now = new Date();
     const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
-    const dateString = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
-    const dynamicSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\nInformasi tambahan untuk lu: Sekarang hari ${dateString}, jam ${timeString} WIB.`;
+    const dayString = now.toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' });
+    const dynamicSystemPrompt = `${BASE_SYSTEM_PROMPT}\n\nInformasi tambahan untuk lu: Sekarang hari ${dayString}, jam ${timeString} WIB.`;
 
     const messagesForApi = [
       { role: 'system', content: dynamicSystemPrompt },
@@ -222,9 +222,6 @@ client.on('messageCreate', async message => {
   processing.add(message.id);
 
   try {
-    // Tampilkan indikator "sedang mengetik" di channel
-    await message.channel.sendTyping();
-
     const history = chatHistories.get(message.author.id) || [];
     await getAiReply(message, history);
   } finally {
