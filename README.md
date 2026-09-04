@@ -20,23 +20,26 @@ export DISCORD_TOKEN=YOUR_DISCORD_TOKEN
 npm start
 ```
 
-## Deploy ke Railway
+## Deploy ke Render
 
 1. Fork / Push ke GitHub
-2. Buka <https://railway.app>
-3. New Project → Deploy from GitHub
-4. Select repository ini
-5. Add Environment Variables:
+2. Buka <https://render.com> lalu pilih **New → Web Service**
+3. Hubungkan repository GitHub ini
+4. Gunakan pengaturan berikut:
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+5. Tambahkan Environment Variables:
    - `CO_API_KEY` = your-cohere-api-key
    - `DISCORD_TOKEN` = your-discord-token
-6. Deploy!
+   - `ALLOWED_CHANNEL_ID` = your-channel-id
+6. Klik **Create Web Service**.
 
 ## Konfigurasi
 
 Semua konfigurasi utama dilakukan melalui **Environment Variables**.
 
-- **System Prompt**: Ubah file `system_prompt.txt` untuk mengatur kepribadian dan gaya bicara AI.
-- **Temperature & Max Tokens**: Ubah konstanta di bagian atas file `bot-cohere.js` untuk kreativitas dan panjang jawaban.
+- **System Prompt**: Ubah file `bot/system_prompt.txt` untuk mengatur kepribadian dan gaya bicara AI.
+- **Temperature & Max Tokens**: Ubah konstanta di bagian atas file `bot/index.js` untuk kreativitas dan panjang jawaban.
 
 ## Environment Variables
 
@@ -45,7 +48,7 @@ Semua konfigurasi utama dilakukan melalui **Environment Variables**.
 | `DISCORD_TOKEN` | **Ya** | Token akun pengguna Discord. |
 | `CO_API_KEY` | **Ya** | Kunci API dari Cohere. |
 | `ALLOWED_CHANNEL_ID` | **Ya** | ID channel tempat bot akan aktif membalas. |
-| `VOICE_CHANNEL_ID` | Tidak | (Opsional) ID voice channel agar bot tetap online 24/7 di Railway. |
+| `VOICE_CHANNEL_ID` | Tidak | (Opsional) ID voice channel agar bot tetap online di Render. |
 | `SPECIFIC_USER_IDS` | Tidak | (Opsional) Batasi balasan hanya untuk user tertentu (pisahkan ID dengan koma). |
 | `CRON_CHANNEL_ID` | Tidak | (Opsional) ID channel untuk pesan terjadwal. |
 | `CRON_MESSAGE` | Tidak | (Opsional) Isi pesan yang akan dikirim terjadwal. |
@@ -68,4 +71,3 @@ Semua konfigurasi utama dilakukan melalui **Environment Variables**.
 ## License
 
 GPL-3.0
-

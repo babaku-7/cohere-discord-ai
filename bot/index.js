@@ -3,17 +3,12 @@ require('dotenv').config();
 
 const { setTimeout: sleep } = require('node:timers/promises');
 const http = require('http');
-// Bot.js - Auto Reply with AI (Cohere)
 const fs = require('fs');
 const { CohereClientV2 } = require('cohere-ai');
 const cron = require('node-cron');
-const { Client } = require('./src/index.js');
+const { Client } = require('../src/index.js');
 const { setupVoiceChannel } = require('./voice-handler.js');
 
-/**
- * Memvalidasi bahwa semua environment variables yang dibutuhkan sudah diatur.
- * Jika ada yang kurang, proses akan dihentikan dengan pesan error yang jelas.
- */
 function validateEnvVars() {
   const requiredEnvVars = ['DISCORD_TOKEN', 'CO_API_KEY', 'ALLOWED_CHANNEL_ID'];
   const missingVars = requiredEnvVars.filter(v => !process.env[v]);
@@ -25,43 +20,35 @@ function validateEnvVars() {
   }
 }
 
-// Setup Cohere API
 const cohere = new CohereClientV2({
-  token: process.env.CO_API_KEY, // Diambil dari environment variable CO_API_KEY
+  token: process.env.CO_API_KEY,
 });
 
 const client = new Client({
   checkUpdate: false,
 });
 
-// Bot config
 const ALLOWED_CHANNEL_ID = process.env.ALLOWED_CHANNEL_ID;
-// Membaca SPECIFIC_USER_IDS dari .env, memisahkan dengan koma, dan membersihkan spasi
 const SPECIFIC_USER_IDS = process.env.SPECIFIC_USER_IDS
   ? process.env.SPECIFIC_USER_IDS.split(',').map(id => id.trim())
   : [];
 const CRON_CHANNEL_ID = process.env.CRON_CHANNEL_ID;
 const CRON_MESSAGE = process.env.CRON_MESSAGE;
 
-// Memuat system prompt dari file eksternal.
 let BASE_SYSTEM_PROMPT = '';
 try {
-  BASE_SYSTEM_PROMPT = fs.readFileSync('./system_prompt.txt', 'utf-8');
+  BASE_SYSTEM_PROMPT = fs.readFileSync(`${__dirname}/system_prompt.txt`, 'utf-8');
 } catch (error) {
   console.error('❌ Gagal memuat system_prompt.txt. Pastikan file tersebut ada.');
-  process.exit(1); // Keluar jika file prompt tidak ditemukan
+  process.exit(1);
 }
 
-// Kunci untuk mencegah balasan ganda pada pesan yang sama.
 const processing = new Set();
 
-// Menyimpan riwayat chat untuk setiap user.
 const chatHistories = new Map();
 
-// Batas jumlah pesan dalam riwayat (user + balasan AI). 6 berarti 3 pasang percakapan.
 const HISTORY_LIMIT = 6;
 
-// --- Command Handler ---
 const commands = new Map();
 
 commands.set('reset', {
@@ -86,36 +73,22 @@ commands.set('ping', {
   },
 });
 
-/**
- * Memeriksa apakah sebuah pesan memenuhi syarat untuk dibalas oleh AI.
- * @param {import('discord.js-selfbot-v13').Message} message Objek pesan yang diterima.
- * @returns {boolean} `true` jika pesan boleh dibalas, `false` jika tidak.
- */
 function isEligibleForReply(message) {
-  // Jangan reply ke pesan sendiri atau bot lain
   if (message.author.id === client.user.id || message.author.bot) {
     return false;
   }
-  // Hanya balas di channel yang diizinkan
   if (message.channelId !== ALLOWED_CHANNEL_ID) {
     return false;
   }
-  // Jika ada user spesifik, hanya balas user tersebut
   if (SPECIFIC_USER_IDS.length > 0 && !SPECIFIC_USER_IDS.includes(message.author.id)) {
     return false;
   }
-  // Jangan proses pesan yang sama dua kali
   if (processing.has(message.id)) {
     return false;
   }
   return true;
 }
 
-/**
- * Menangani perintah khusus seperti !reset.
- * @param {import('discord.js-selfbot-v13').Message} message Objek pesan yang diterima.
- * @returns {boolean} `true` jika pesan adalah perintah dan sudah ditangani, `false` jika bukan.
- */
 async function handleCommand(message) {
   if (!message.content.startsWith('!')) return false;
 
@@ -129,14 +102,8 @@ async function handleCommand(message) {
   return false;
 }
 
-/**
- * Menghasilkan balasan dari AI menggunakan Cohere.
- * @param {import('discord.js-selfbot-v13').Message} message Objek pesan yang diterima.
- * @param {Array<Object>} history Riwayat percakapan dengan user.
- */
 async function getAiReply(message, history) {
   try {
-    // Buat system prompt dinamis dengan informasi waktu
     const now = new Date();
     const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
     const dayString = now.toLocaleDateString('id-ID', { weekday: 'long', timeZone: 'Asia/Jakarta' });
@@ -158,11 +125,9 @@ async function getAiReply(message, history) {
     const aiReply = response.message.content[0].text.trim();
     console.log(`[AI-REPLY] Untuk ${message.author.username}: "${aiReply}"`);
 
-    // Simpan pesan user dan balasan AI ke riwayat
     history.push({ role: 'user', content: message.content });
     history.push({ role: 'assistant', content: aiReply });
 
-    // Batasi panjang riwayat
     while (history.length > HISTORY_LIMIT) {
       history.shift();
     }
@@ -182,12 +147,9 @@ async function getAiReply(message, history) {
   }
 }
 
-// Auto-Reply ke pesan DENGAN AI
 client.on('messageCreate', async message => {
-  // Jangan proses pesan jika tidak memenuhi syarat (misal, dari channel yang salah, dari bot, dll.)
   if (!isEligibleForReply(message)) return;
 
-  // Cek apakah pesan adalah sebuah perintah. Jika ya, eksekusi dan hentikan proses AI.
   const isCommand = await handleCommand(message);
   if (isCommand) return;
 
@@ -199,24 +161,19 @@ client.on('messageCreate', async message => {
     const history = chatHistories.get(message.author.id) || [];
     await getAiReply(message, history);
   } finally {
-    // Hapus tanda proses setelah beberapa saat
     await sleep(3000);
     processing.delete(message.id);
   }
 });
 
-// --- Event Handler untuk Bot Siap ---
-validateEnvVars(); // Validasi environment variables sebelum login
+validateEnvVars();
 
-// Gunakan client.once('ready', ...) untuk memastikan kode ini hanya berjalan sekali.
 client.once('ready', () => {
   console.log(`[READY] Berhasil login sebagai ${client.user.tag}`);
   console.log('[INFO] Menggunakan Cohere AI untuk balasan.');
 
-  // Bergabung ke voice channel jika VOICE_CHANNEL_ID diatur
   setupVoiceChannel(client);
 
-  // Jadwalkan pesan jika diatur di .env
   if (CRON_CHANNEL_ID && CRON_MESSAGE && cron.validate('0 7 * * *')) {
     cron.schedule('0 7 * * *', async () => {
         try {
@@ -231,7 +188,6 @@ client.once('ready', () => {
   }
 });
 
-// --- HTTP Server for Health Checks (Render/Railway) ---
 const PORT = process.env.PORT || 3000;
 http
   .createServer((req, res) => {
@@ -240,4 +196,4 @@ http
   })
   .listen(PORT, () => console.log(`[INFO] Health check server listening on port ${PORT}`));
 
-client.login(process.env.DISCORD_TOKEN); // Diambil dari environment variable DISCORD_TOKEN
+client.login(process.env.DISCORD_TOKEN);

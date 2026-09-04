@@ -1,1 +1,1 @@
-web: node bot-cohere.js
+web: node bot/index.js
