@@ -1,5 +1,8 @@
 'use strict';
 
+const process = require('node:process');
+const { setTimeout } = require('node:timers');
+
 const VOICE_CHANNEL_ID = process.env.VOICE_CHANNEL_ID;
 
 async function joinVoiceChannel(client) {
@@ -16,7 +19,9 @@ async function joinVoiceChannel(client) {
     console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted)`);
   } catch (error) {
     if (channel && error.message.includes('Connection not established within 15 seconds')) {
-      console.log(`[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted), meskipun ada peringatan timeout.`);
+      console.log(
+        `[INFO] Berhasil bergabung ke voice channel: ${channel.name} (Muted), meskipun ada peringatan timeout.`,
+      );
     } else {
       console.error(`[ERROR] Gagal bergabung ke voice channel: ${error.message}`);
     }
@@ -34,4 +39,6 @@ function setupVoiceChannel(client) {
   });
 }
 
-module.exports = { setupVoiceChannel };
+module.exports = {
+  setupVoiceChannel,
+};
