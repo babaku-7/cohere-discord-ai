@@ -71,7 +71,7 @@
     "node": ">=20.18"
   },
   "devDependencies": {
-    "@discordjs/docgen": "^0.11.1",
+    "@discordjs/docgen": "^0.12.1",
     "@types/debug": "^4.1.12",
     "@types/node": "^22.10.7",
     "@types/ws": "^8.5.10",
